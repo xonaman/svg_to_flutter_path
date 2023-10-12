@@ -1,0 +1,10 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    prefer_single_quotes: true
+    always_use_package_imports: true
+    library_private_types_in_public_api: false
+    prefer_final_locals: true
+    always_specify_types: true
+    avoid_redundant_argument_values: true
