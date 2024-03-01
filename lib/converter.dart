@@ -19,54 +19,38 @@ abstract class Converter {
       'final Path path = Path();\n',
     );
 
-    int lastIndex = 0;
     String lastLetter = '';
+    int index = 0;
     double previousX = 0;
     double previousY = 0;
-
-    List<double> takeNumbers({
-      required int count,
-      required int startIndex,
-    }) {
-      final List<double> numbers = <double>[];
-      int lastNumIndex = startIndex;
-      while (numbers.length < count) {
-        final Match? numMatch =
-            RegExp(r'\s*-?[0-9]+(\.)?([0-9]+)?|\s*-?\.[0-9]+')
-                .matchAsPrefix(svgPath, lastNumIndex);
-        if (numMatch == null) {
-          break;
-        }
-        numbers.add(double.parse(numMatch[0]!));
-        lastNumIndex = numMatch.end;
-      }
-      lastIndex = lastNumIndex;
-      return numbers;
-    }
-
     double previousControlEndX = 0;
     double previousControlEndY = 0;
 
-    while (lastIndex < svgPath.length) {
-      int newIndex;
-      String letter;
-      final Match? match = RegExp(r'[A-z]').matchAsPrefix(svgPath, lastIndex);
-      if (match != null) {
-        newIndex = match.end;
-        letter = match[0]!;
-      } else if (lastLetter.toLowerCase() == 'm') {
-        newIndex = lastIndex;
-        letter = 'L';
-      } else {
-        newIndex = lastIndex;
-        letter = lastLetter;
+    List<double> takeNumbers(int amount) {
+      final List<double> result = <double>[];
+      while (result.length < amount && index < svgPath.length) {
+        final RegExpMatch? match = RegExp(
+          r'^-?[0-9]+(?:\.[0-9]+)?',
+        ).firstMatch(svgPath.substring(index));
+        if (match?[0] != null) {
+          result.add(double.parse(match![0]!));
+          index += match[0]!.length;
+        } else {
+          index++;
+        }
       }
+      return result;
+    }
+
+    while (index < svgPath.length) {
+      final RegExpMatch? match = RegExp(
+        r'^\s*([A-z])',
+      ).firstMatch(svgPath.substring(index));
+      final String letter = match?[1] != null ? match![1]! : lastLetter;
+
       switch (letter.toLowerCase()) {
         case 'a':
-          final List<double> numbers = takeNumbers(
-            count: 7,
-            startIndex: newIndex,
-          );
+          final List<double> numbers = takeNumbers(7);
           if (StringUtils.isLowerCase(letter)) {
             numbers[5] += previousX;
             numbers[6] += previousY;
@@ -90,10 +74,7 @@ abstract class Converter {
           previousY = numbers[6];
           break;
         case 'm':
-          final List<double> numbers = takeNumbers(
-            count: 2,
-            startIndex: newIndex,
-          );
+          final List<double> numbers = takeNumbers(2);
           if (StringUtils.isLowerCase(letter)) {
             numbers[0] += previousX;
             numbers[1] += previousY;
@@ -108,10 +89,7 @@ abstract class Converter {
           previousY = numbers[1];
           break;
         case 'l':
-          final List<double> numbers = takeNumbers(
-            count: 2,
-            startIndex: newIndex,
-          );
+          final List<double> numbers = takeNumbers(2);
           if (StringUtils.isLowerCase(letter)) {
             numbers[0] += previousX;
             numbers[1] += previousY;
@@ -126,10 +104,7 @@ abstract class Converter {
           previousY = numbers[1];
           break;
         case 'h':
-          final List<double> numbers = takeNumbers(
-            count: 1,
-            startIndex: newIndex,
-          );
+          final List<double> numbers = takeNumbers(1);
           if (StringUtils.isLowerCase(letter)) {
             numbers[0] += previousX;
           }
@@ -142,10 +117,7 @@ abstract class Converter {
           previousX = numbers[0];
           break;
         case 'v':
-          final List<double> numbers = takeNumbers(
-            count: 1,
-            startIndex: newIndex,
-          );
+          final List<double> numbers = takeNumbers(1);
           if (StringUtils.isLowerCase(letter)) {
             numbers[0] += previousY;
           }
@@ -158,10 +130,7 @@ abstract class Converter {
           previousY = numbers[0];
           break;
         case 'q':
-          final List<double> numbers = takeNumbers(
-            count: 4,
-            startIndex: newIndex,
-          );
+          final List<double> numbers = takeNumbers(4);
           if (StringUtils.isLowerCase(letter)) {
             numbers[0] += previousX;
             numbers[1] += previousY;
@@ -182,10 +151,7 @@ abstract class Converter {
           previousControlEndY = numbers[3];
           break;
         case 'c':
-          final List<double> numbers = takeNumbers(
-            count: 6,
-            startIndex: newIndex,
-          );
+          final List<double> numbers = takeNumbers(6);
           if (StringUtils.isLowerCase(letter)) {
             numbers[0] += previousX;
             numbers[1] += previousY;
@@ -210,10 +176,7 @@ abstract class Converter {
           previousControlEndY = numbers[3];
           break;
         case 's':
-          final List<double> numbers = takeNumbers(
-            count: 4,
-            startIndex: newIndex,
-          );
+          final List<double> numbers = takeNumbers(4);
           if (StringUtils.isLowerCase(letter)) {
             numbers[0] += previousX;
             numbers[1] += previousY;
@@ -239,14 +202,19 @@ abstract class Converter {
           break;
         case 'z':
           resultBuffer.write('path.close();\n');
-          lastIndex = newIndex;
+          index++;
           break;
         default:
-          lastIndex = newIndex;
+          index++;
           break;
       }
       lastLetter = letter;
     }
-    return resultBuffer.toString();
+
+    final String result = resultBuffer.toString();
+    if (!result.endsWith('path.close();\n')) {
+      return '${result}path.close();\n';
+    }
+    return result;
   }
 }
