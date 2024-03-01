@@ -210,11 +210,6 @@ abstract class Converter {
       }
       lastLetter = letter;
     }
-
-    final String result = resultBuffer.toString();
-    if (!result.endsWith('path.close();\n')) {
-      return '${result}path.close();\n';
-    }
-    return result;
+    return resultBuffer.toString();
   }
 }
